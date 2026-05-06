@@ -1,4 +1,5 @@
 #include <scheduler.h>
+#include <avr/io.h>
 
 // GLOBAL SETUP
 // the OS's array of Task Control Blocks
@@ -20,6 +21,7 @@ void os_init(void)
   memeset(os_tasks, 0, sizeof(os_tasks));
 }
 
+// Register a task with the scheduler
 int8_t os_task_create(task_func_t function)
 {
   // check if there is room for another task
@@ -49,4 +51,38 @@ int8_t os_task_create(task_func_t function)
   // increment the task counter
   os_task_count++;
   return 0;
+}
+
+// Timer1 setup
+static void os_timer_init(void)
+{
+  // TCCR1A (Timer/Counter1 Control Register A)
+  TCCR1A = 0x00;
+  /*
+   *  Prescaler options (for reference):
+   *      CS12:CS11:CS10 = 001 → No prescaler (too fast for our needs)
+   *      CS12:CS11:CS10 = 010 → /8
+   *      CS12:CS11:CS10 = 011 → /64
+   *      CS12:CS11:CS10 = 100 → /256  ← we use this
+   *      CS12:CS11:CS10 = 101 → /1024
+   *
+   *  Breaking down:
+   *      WGM12 = 1 → CTC mode (clear timer on compare match with OCR1A)
+   *      CS12  = 1, CS11 = 0, CS10 = 0 → Clock / 256 prescaler
+   */
+  // TCCR1B (Timer/Counter1 Control Register B)
+  // Setting WGM12 bit for CTC(Clear Timer on Compare) and CS12 bit for /256 prescaler
+  TCCR1B = (1 << WGM12) | (1 << CS12);
+
+  // OCR1A (Output Compare Register 1A)
+  // The value the timer counts up to before firing the interrupt
+  OCR1A = 624; //(16MHz / 256 / 100Hz) - 1
+  // TCNT1 (Timer/Cointer1 value)
+  // reset the timer counter to zero so it starts fresh
+  TCNT1 = 0;
+  // TIMSK1 (Timer/Counter1 Interrupt Mask Register)
+  // Enable the Output Compare A Match interrupt
+  // This tells the CPU : "When Timer1 reaches OCR1A, jump to the
+  // ISR(TIMER1_COMPA_vect) function."
+  TIMSK1 |= (1 << OCIE1A);
 }

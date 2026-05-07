@@ -53,6 +53,19 @@ int8_t os_task_create(task_func_t function)
   return 0;
 }
 
+/**
+ * The math to context switch every 10ms at 16MHz with a prescaler of 256:
+ *
+ * - We get the 16MHz from the F_CPU(CPU Clock Frequency)in the ATmega328P chip we are using.
+ * - The prescaler divides the CPU clock down to a slower timer clock. The available prescaler values are:
+ *   1, 8, 64, 256, 1024, etc. which are defined by the chip's timer peripheral in the datasheet's timer registers description.
+ * With the MHz and prescaler values we calculate the desired tick rate to context switch.
+ * I chose to start with 10ms. So the calculation will be:
+ *   Timer frequency = CPU_clock / prescaler = 16,000,000 / 256 = 62,500 Hz
+ *   Ticks per 10ms  = 62,500 * 0.010 = 625
+ *   So OCR1A = 625 - 1 = 624
+ */
+
 // Timer1 setup
 static void os_timer_init(void)
 {

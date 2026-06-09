@@ -138,43 +138,75 @@ static void os_timer_init(void)
       "push r29 \n\t"                                 \
       "push r30 \n\t"                                 \
       "push r31 \n\t");                               \
-  *os_tasks[os_current_task].stack_pointer = (uint8_t *)(SP)
+  *os_tasks[os_current_task].stack_pointer = (volatile uint8_t *)SP;
 
-#define RESTORE_CONTEXT()                                         \
-  /* Load the new task's saved stack pointer */                   \
-  SP = (uint16_t)os_tasks[os_current_task].stack_pointer;         \
-  asm volatile(                                                   \
-      "pop  r31                          \n\t"                    \
-      "pop  r30                          \n\t"                    \
-      "pop  r29                          \n\t"                    \
-      "pop  r28                          \n\t"                    \
-      "pop  r27                          \n\t"                    \
-      "pop  r26                          \n\t"                    \
-      "pop  r25                          \n\t"                    \
-      "pop  r24                          \n\t"                    \
-      "pop  r23                          \n\t"                    \
-      "pop  r22                          \n\t"                    \
-      "pop  r21                          \n\t"                    \
-      "pop  r20                          \n\t"                    \
-      "pop  r19                          \n\t"                    \
-      "pop  r18                          \n\t"                    \
-      "pop  r17                          \n\t"                    \
-      "pop  r16                          \n\t"                    \
-      "pop  r15                          \n\t"                    \
-      "pop  r14                          \n\t"                    \
-      "pop  r13                          \n\t"                    \
-      "pop  r12                          \n\t"                    \
-      "pop  r11                          \n\t"                    \
-      "pop  r10                          \n\t"                    \
-      "pop  r9                           \n\t"                    \
-      "pop  r8                           \n\t"                    \
-      "pop  r7                           \n\t"                    \
-      "pop  r6                           \n\t"                    \
-      "pop  r5                           \n\t"                    \
-      "pop  r4                           \n\t"                    \
-      "pop  r3                           \n\t"                    \
-      "pop  r2                           \n\t"                    \
-      "pop  r1                           \n\t"                    \
-      "pop  r0                           \n\t" /* this is SREG */ \
-      "out  __SREG__, r0                 \n\t" /* restore SREG */ \
-      "pop  r0                           \n\t" /* restore real r0 */)
+#define RESTORE_CONTEXT()                                            \
+  /* Load the new task's saved stack pointer */                      \
+  SP = (uint16_t)os_tasks[os_current_task].stack_pointer;            \
+  asm volatile(                                                      \
+      "pop  r31                          \n\t"                       \
+      "pop  r30                          \n\t"                       \
+      "pop  r29                          \n\t"                       \
+      "pop  r28                          \n\t"                       \
+      "pop  r27                          \n\t"                       \
+      "pop  r26                          \n\t"                       \
+      "pop  r25                          \n\t"                       \
+      "pop  r24                          \n\t"                       \
+      "pop  r23                          \n\t"                       \
+      "pop  r22                          \n\t"                       \
+      "pop  r21                          \n\t"                       \
+      "pop  r20                          \n\t"                       \
+      "pop  r19                          \n\t"                       \
+      "pop  r18                          \n\t"                       \
+      "pop  r17                          \n\t"                       \
+      "pop  r16                          \n\t"                       \
+      "pop  r15                          \n\t"                       \
+      "pop  r14                          \n\t"                       \
+      "pop  r13                          \n\t"                       \
+      "pop  r12                          \n\t"                       \
+      "pop  r11                          \n\t"                       \
+      "pop  r10                          \n\t"                       \
+      "pop  r9                           \n\t"                       \
+      "pop  r8                           \n\t"                       \
+      "pop  r7                           \n\t"                       \
+      "pop  r6                           \n\t"                       \
+      "pop  r5                           \n\t"                       \
+      "pop  r4                           \n\t"                       \
+      "pop  r3                           \n\t"                       \
+      "pop  r2                           \n\t"                       \
+      "pop  r1                           \n\t"                       \
+      "pop  r0                           \n\t" /* this is SREG */    \
+      "out  __SREG__, r0                 \n\t" /* restore SREG */    \
+      "pop  r0                           \n\t" /* restore real r0 */ \
+  );
+
+// Implement the Timer ISR
+ISR(TIMER1_COMPA_vect, ISR_NAKED)
+{
+  // save the current task's context
+  SAVE_CONTEXT();
+  // pick the next task
+  os_current_task++;
+  if (os_current_task >= os_task_count)
+  {
+    os_current_task = 0;
+  }
+  // restore the next task's context
+  RESTORE_CONTEXT();
+  // return from interrupt into the restored task
+  asm volatile("reti");
+};
+
+/*
+ *   1. Task 1 is happily running, toggling its LED...
+ *   2. *BOOM* Timer1 interrupt fires!
+ *   3. The CPU automatically pushes the Program Counter (PC) onto
+ *      Task 1's stack and jumps to our ISR.
+ *   4. SAVE_CONTEXT pushes all of Task 1's registers and saves its SP.
+ *   5. We advance os_current_task to point to Task 2.
+ *   6. RESTORE_CONTEXT loads Task 2's SP and pops all its registers.
+ *   7. reti pops the return address (which is wherever Task 2 was
+ *      interrupted last time) and jumps there.
+ *   8. Task 2 continues running from exactly where it left off.
+ *   9. 10ms later, the timer fires again and the cycle repeats.
+ */

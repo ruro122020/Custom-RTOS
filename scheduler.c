@@ -210,3 +210,39 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
  *   8. Task 2 continues running from exactly where it left off.
  *   9. 10ms later, the timer fires again and the cycle repeats.
  */
+
+void os_start(void)
+{
+  // start the schedular
+
+  // disable interrupts while we set things up.
+  cli();
+  /*
+   *   cli() sets the I-flag in SREG to 0, preventing any interrupt
+   *   from firing while we're configuring the timer and loading
+   *   the first task. Without this, a timer interrupt could fire
+   *   before we're ready, causing a crash.
+   */
+
+  // initialize the timer
+  os_timer_init();
+  // set the current task to task 0 (the first one created).
+  os_current_task = 0;
+  // restore task 0's context and start running it
+  RESTORE_CONTEXT();
+
+  /*
+   *   This loads Task 0's saved stack pointer into the CPU's SP,
+   *   then pops all the register values we set up in os_task_create().
+   *   The stack now has only the return address (the task function's
+   *   address) left on it.
+   */
+
+  asm volatile("reti");
+  /*
+   *   reti pops the return address (our task function) off the stack
+   *   and jumps to it. It also re-enables interrupts (sets I-flag).
+   *   From this point on, Task 0 is running and the timer interrupt
+   *   will take care of switching between tasks.
+   */
+};

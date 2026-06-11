@@ -1,5 +1,6 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
+
 #include <stdint.h> /* gives us uint8_t, uint16_t, etc. — fixed-size integers */
 
 #define MAX_TASKS 2

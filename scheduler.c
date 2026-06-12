@@ -1,3 +1,21 @@
+/*
+ * scheduler.c is the implementation of the Mini RTOS scheduler
+ *
+ * This file contains the actual working code behind the API declared in
+ * scheduler.h. While the header is the "table of contents," this is the
+ * book itself: task creation, the timer setup, the context-switch
+ * machinery, and the scheduler startup all live here.
+ *
+ * What's inside:
+ *   - os_tasks[] / os_current_task / os_task_count — the scheduler's state
+ *   - os_init() — reset the scheduler state
+ *   - os_task_create() — build a fake stack frame so a task can be "resumed"
+ *   - os_timer_init() — configure Timer1 to fire every 10ms
+ *   - SAVE_CONTEXT / RESTORE_CONTEXT — push/pop all registers during a switch
+ *   - ISR(TIMER1_COMPA_vect) — the interrupt that performs the task switch
+ *   - os_start() — kick off the first task and hand control to the timer
+ */
+
 #include <scheduler.h>
 #include <avr/io.h>
 

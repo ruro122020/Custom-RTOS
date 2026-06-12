@@ -1,3 +1,13 @@
+/*
+ * scheduler.h is the Public API for Mini RTOS
+ *
+ * This file defines the data structures and function signatures that make up
+ * the scheduler. Think of it as the "table of contents," the actual
+ * implementation lives in scheduler.c.
+ *
+ * You shouldn't need to change much in this file. It's mostly reading.
+ * The real work happens in scheduler.c.
+ */
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 

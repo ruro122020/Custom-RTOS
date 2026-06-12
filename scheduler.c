@@ -16,8 +16,9 @@
  *   - os_start() — kick off the first task and hand control to the timer
  */
 
-#include <scheduler.h>
+#include "scheduler.h"
 #include <avr/io.h>
+#include <string.h> /* for memset() */
 
 // GLOBAL SETUP
 // the OS's array of Task Control Blocks
